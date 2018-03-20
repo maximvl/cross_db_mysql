@@ -35,4 +35,4 @@ stop(_State) ->
 
 %% @hidden
 init([]) ->
-  {ok, {{one_for_all, 0, 1}, []}}.
+  {ok, {{one_for_one, 10, 10}, []}}.
