@@ -187,12 +187,11 @@ do_insert_all(Pid, #{schema := Schema} = Meta, List0) ->
 
 %% @private
 do_execute(Pid, all, Schema, Source, Query) ->
-  #{
-    select  := SelectFields,
-    where   := Conditions,
-    limit   := Limit,
-    offset  := Offset
-  } = Query,
+  Conditions = maps:get(where, Query, []),
+  SelectFields = maps:get(select, Query, []),
+  Limit = maps:get(limit, Query, 0),
+  Offset = maps:get(offset, Query, 0),
+
   {Query0, Params} = xdb_sql:s(Source, SelectFields, Conditions, [], Offset, Limit, ""),
 
   maybe_transaction(Pid, fun() ->
@@ -208,9 +207,7 @@ do_execute(Pid, all, Schema, Source, Query) ->
     end
   end);
 do_execute(Pid, delete_all, _Schema, Source, Query) ->
-  #{
-    where := Conditions
-  } = Query,
+  Conditions = maps:get(where, Query, []),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {DQuery, DParams} = get_delete_query(Source, Conditions),
@@ -227,10 +224,8 @@ do_execute(Pid, delete_all, _Schema, Source, Query) ->
     end
   end);
 do_execute(Pid, update_all, _Schema, Source, Query) ->
-  #{
-    updates := UpdateFields,
-    where := Conditions
-  } = Query,
+  Conditions = maps:get(where, Query, []),
+  UpdateFields = maps:get(updates, Query, []),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {UQuery, UParams, WParams} = xdb_sql:u(Source, UpdateFields, Conditions),
@@ -248,10 +243,8 @@ do_execute(Pid, update_all, _Schema, Source, Query) ->
   end).
 
 do_update(Pid, _Repo, Filters, Schema, Source, Query) ->
-  #{
-    updates := UpdateFields,
-    where := Conditions
-  } = Query,
+  Conditions = maps:get(where, Query, []),
+  UpdateFields = maps:get(updates, Query, []),
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {UQuery, UParams, WParams} = xdb_sql:u(Source, UpdateFields, Conditions),
 
@@ -275,9 +268,7 @@ do_update(Pid, _Repo, Filters, Schema, Source, Query) ->
   end).
 
 do_delete(Pid, _Repo, Filters, Schema, Source, Query) ->
-  #{
-    where := Conditions
-  } = Query,
+  Conditions = maps:get(where, Query, []),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {DQuery, DParams} = get_delete_query(Source, Conditions),
