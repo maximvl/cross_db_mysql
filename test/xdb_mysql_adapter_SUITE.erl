@@ -9,7 +9,9 @@
 
 %% Test Cases
 -export([
-  t_pool/1
+  t_pool/1,
+  t_insert_all/1,
+  t_insert_errors/1
 ]).
 
 %% Test Cases
@@ -18,26 +20,24 @@
   {xdb_repo_basic_test, [
     % CT
     init_per_testcase/2,
-    end_per_testcase/2
+    end_per_testcase/2,
 
     % Test Cases
-    % t_insert/1,
-    % t_insert_errors/1,
-    % t_insert_on_conflict/1,
-    % t_insert_all/1,
-    % t_insert_all_on_conflict/1,
-    % t_update/1,
-    % t_delete/1,
-    % t_get/1,
-    % t_get_by/1,
-    % t_all/1,
-    % t_all_with_pagination/1,
-    % t_delete_all/1,
-    % t_delete_all_with_conditions/1,
-    % t_update_all/1,
-    % t_update_all_with_conditions/1
+      t_insert/1,
+      t_update/1,
+      t_delete/1,
+      t_get/1,
+      t_get_by/1,
+      t_all/1,
+      t_all_with_pagination/1,
+      t_delete_all/1,
+      t_delete_all_with_conditions/1,
+      t_update_all/1,
+      t_update_all_with_conditions/1
   ]}
 ]).
+
+-import(xdb_ct, [assert_error/2]).
 
 -define(EXCLUDED_FUNS, [
   module_info,
@@ -78,3 +78,38 @@ t_pool(Config) ->
   Pool = list_to_atom(atom_to_list(Repo) ++ "_pool"),
   {ready, 5, 0, 0} = poolboy:status(Pool),
   ok.
+
+-spec t_insert_all(xdb_ct:config()) -> ok.
+t_insert_all(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+  [] = Repo:all(person),
+
+  People = [
+    #{id => 1, first_name => "Alan", last_name => "Turing", age => 41, is_blocked => true},
+    #{id => 2, first_name => "Charles", last_name => "Darwin", age => 73},
+    #{id => 3, first_name => "Alan", last_name => "Poe", age => 40}
+  ],
+
+  {3, _} = Repo:insert_all(person, People),
+
+  #{
+    1 := #{'__meta__' := _, first_name := <<"Alan">>, last_name := <<"Turing">>},
+    2 := #{'__meta__' := _, first_name := <<"Charles">>, last_name := <<"Darwin">>},
+    3 := #{'__meta__' := _, first_name := <<"Alan">>, last_name := <<"Poe">>}
+  } = All1 = person:list_to_map(Repo:all(person)),
+  3 = maps:size(All1),
+  ok.
+
+-spec t_insert_errors(xdb_ct:config()) -> ok.
+t_insert_errors(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+
+  {error, CS} =
+    xdb_ct:pipe(#{id => 1}, [
+      {fun person:schema/1, []},
+      {fun xdb_changeset:change/2, [#{first_name => <<"Joe">>}]},
+      {fun xdb_changeset:add_error/3, [first_name, <<"Invalid">>]},
+      {fun Repo:insert/1, []}
+    ]),
+
+  ok = assert_error(fun() -> Repo:update(CS) end, badarg).
