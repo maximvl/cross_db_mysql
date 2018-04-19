@@ -5,7 +5,9 @@
   {mod, {xdb_mysql, []}},
   {applications, [
     kernel,
-    stdlib
+    stdlib,
+    poolboy,
+    mysql
   ]},
   {env,[]},
   {modules, []},
