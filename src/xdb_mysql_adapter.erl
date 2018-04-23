@@ -26,6 +26,7 @@
 
 %% Defaults
 -define(DEFAULT_POOL_SIZE, erlang:system_info(schedulers_online)).
+-define(AUTO_PK, [primary_key, autogenerate_id]).
 
 %%%===================================================================
 %%% Adapter callbacks
@@ -156,8 +157,15 @@ do_insert(Pid, #{schema := Schema, source := Source}, Fields0) ->
     {Query, Params} = xdb_sql:i(Source, maps:to_list(Fields0)),
     case mysql:query(Pid, lists:flatten(Query), Params) of
       ok ->
-        Fields = normalize(Schema, Fields0),
-        {ok, Fields};
+        #{fields := SchemaSpec} = Schema:schema_spec(),
+        PrimaryField = [Field || {Field, _, Options} <- SchemaSpec, [] == ?AUTO_PK -- Options],
+        case PrimaryField of
+          [] ->
+            {ok, normalize(Schema, Fields0)};
+          [Key] ->
+            AutoId = mysql:insert_id(Pid),
+            {ok, normalize(Schema, Fields0#{Key => AutoId})}
+        end;
       {error, {1062, _, _}} ->
         {error, conflict};
       {error, {Code, _SqlState, Reason}} ->
