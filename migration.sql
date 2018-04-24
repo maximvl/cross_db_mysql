@@ -21,4 +21,11 @@ CREATE TABLE IF NOT EXISTS `people` (
  `weird_field2`  VARCHAR(100),
  `weird_field3`  VARCHAR(100),
   PRIMARY KEY(`ID`)
+);gst
+
+## People Table
+DROP TABLE IF EXISTS autoincrement;
+CREATE TABLE IF NOT EXISTS `autoincrement` (
+ `id`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY(`ID`)
 );

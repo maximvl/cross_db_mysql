@@ -11,7 +11,8 @@
 -export([
   t_pool/1,
   t_insert_all/1,
-  t_insert_errors/1
+  t_insert_errors/1,
+  t_insert_autoincrement/1
 ]).
 
 %% Test Cases
@@ -113,3 +114,9 @@ t_insert_errors(Config) ->
     ]),
 
   ok = assert_error(fun() -> Repo:update(CS) end, badarg).
+
+-spec t_insert_autoincrement(xdb_ct:config()) -> ok.
+t_insert_autoincrement(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+  {ok, #{id := Id}} = Repo:insert(autoincrement:schema()),
+  true = (Id =/= undefined).
