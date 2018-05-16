@@ -5,7 +5,8 @@
 -export([
   all/0,
   init_per_suite/1,
-  end_per_suite/1
+  end_per_suite/1,
+  t_transaction_exception/1
 ]).
 
 -include_lib("mixer/include/mixer.hrl").
@@ -51,3 +52,18 @@ init_per_suite(Config) ->
 -spec end_per_suite(xdb_ct:config()) -> ok.
 end_per_suite(_) ->
   ok = application:stop(cross_db_mysql).
+
+-spec t_transaction_exception(xdb_ct:config()) -> ok.
+t_transaction_exception(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+  {error,{badmatch, _}} =
+    Repo:transaction(fun() ->
+      A = #{a => 1},
+      #{b := _B} = A
+    end),
+
+  {error, undef} =
+    Repo:transaction(fun() ->
+      Repo:in_transaction(Repo, 2)
+    end),
+  ok.
