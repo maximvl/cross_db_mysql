@@ -12,7 +12,8 @@
   t_pool/1,
   t_insert_all/1,
   t_insert_errors/1,
-  t_insert_autoincrement/1
+  t_insert_autoincrement/1,
+  t_update_empty/1
 ]).
 
 %% Test Cases
@@ -120,3 +121,35 @@ t_insert_autoincrement(Config) ->
   Repo = xdb_lib:keyfetch(repo, Config),
   {ok, #{id := Id}} = Repo:insert(autoincrement:schema()),
   true = (Id =/= undefined).
+
+-spec t_update_empty(xdb_ct:config()) -> ok.
+t_update_empty(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+  ok = seed(Config),
+  Person = Repo:get(person, 1),
+
+  {ok, _CS} =
+    xdb_ct:pipe(Person, [
+      {fun person:changeset/2, [#{}]},
+      {fun Repo:update/1, []}
+    ]),
+
+  Person = Repo:get(person, 1),
+  ok.
+
+%%%===================================================================
+%%% Helpers
+%%%===================================================================
+
+-spec seed(xdb_ct:config()) -> ok.
+seed(Config) ->
+  Repo = xdb_lib:keyfetch(repo, Config),
+
+  People = [
+    person:schema(#{id => 1, first_name => "Alan", last_name => "Turing", age => 41}),
+    person:schema(#{id => 2, first_name => "Charles", last_name => "Darwin", age => 73}),
+    person:schema(#{id => 3, first_name => "Alan", last_name => "Poe", age => 40})
+  ],
+
+  _ = [_ = Repo:insert_or_raise(P) || P <- People],
+  ok.
