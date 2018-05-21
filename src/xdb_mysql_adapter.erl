@@ -195,7 +195,7 @@ do_insert_all(Pid, #{schema := Schema} = Meta, List0) ->
 
 %% @private
 do_execute(Pid, all, Schema, Source, Query) ->
-  Conditions = maps:get(where, Query, []),
+  Conditions = normalize_query(maps:get(where, Query, [])),
   SelectFields = maps:get(select, Query, []),
   Limit = maps:get(limit, Query, 0),
   Offset = maps:get(offset, Query, 0),
@@ -215,7 +215,7 @@ do_execute(Pid, all, Schema, Source, Query) ->
     end
   end);
 do_execute(Pid, delete_all, _Schema, Source, Query) ->
-  Conditions = maps:get(where, Query, []),
+  Conditions = normalize_query(maps:get(where, Query, [])),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {DQuery, DParams} = get_delete_query(Source, Conditions),
@@ -232,8 +232,8 @@ do_execute(Pid, delete_all, _Schema, Source, Query) ->
     end
   end);
 do_execute(Pid, update_all, _Schema, Source, Query) ->
-  Conditions = maps:get(where, Query, []),
-  UpdateFields = maps:get(updates, Query, []),
+  Conditions = normalize_query(maps:get(where, Query, [])),
+  UpdateFields = normalize_query(maps:get(updates, Query, [])),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {UQuery, UParams, WParams} = xdb_sql:u(Source, UpdateFields, Conditions),
@@ -251,8 +251,8 @@ do_execute(Pid, update_all, _Schema, Source, Query) ->
   end).
 
 do_update(Pid, _Repo, Filters, Schema, Source, Query) ->
-  Conditions = maps:get(where, Query, []),
-  UpdateFields = maps:get(updates, Query, []),
+  Conditions = normalize_query(maps:get(where, Query, [])),
+  UpdateFields = normalize_query(maps:get(updates, Query, [])),
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {UQuery, UParams, WParams} = xdb_sql:u(Source, UpdateFields, Conditions),
 
@@ -276,7 +276,7 @@ do_update(Pid, _Repo, Filters, Schema, Source, Query) ->
   end).
 
 do_delete(Pid, _Repo, Filters, Schema, Source, Query) ->
-  Conditions = maps:get(where, Query, []),
+  Conditions = normalize_query(maps:get(where, Query, [])),
 
   {CountQuery, CountParams}= get_count_query(Source, Conditions),
   {DQuery, DParams} = get_delete_query(Source, Conditions),
@@ -401,10 +401,32 @@ get_value(null) ->
 get_value(Value) ->
   Value.
 
+normalize_query([{Key, Values}]) when is_list(Values) ->
+  [{Key, [normalize_query(Value) || Value <- Values]}];
+normalize_query(Params) when is_list(Params) ->
+  [normalize_query(Param) || Param <- Params];
+normalize_query([{Key, undefined}]) ->
+  [{Key, null}];
+normalize_query([{Key, Op, undefined}]) ->
+  [{Key, Op, null}];
+normalize_query([{Key, Value}]) ->
+  [{Key, Value}];
+normalize_query([{Key, Op, Value}]) ->
+  [{Key, Op, Value}];
+normalize_query({Key, undefined}) ->
+  {Key, null};
+normalize_query({Key, Op, undefined}) ->
+  {Key, Op, null};
+normalize_query({Key, Value}) ->
+  {Key, Value};
+normalize_query({Key, Op, Value}) ->
+  {Key, Op, Value};
+normalize_query([]) ->
+  [].
+
 %% based on data types...
 transform(Filters) ->
-  [{K, V}] = Filters,
-  [{K, '==', V}].
+  [{K, '==', V} || {K, V} <- Filters, V =/= undefined].
 
 exec_transaction(Pid, Fun) ->
   exec_transaction(Pid, Fun, fun xdb_lib:raise/1).
