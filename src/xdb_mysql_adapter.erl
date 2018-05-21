@@ -250,6 +250,10 @@ do_execute(Pid, update_all, _Schema, Source, Query) ->
       end
   end).
 
+do_update(Pid, _Repo, Filters, Schema, Source, #{updates := []}) ->
+  GetQuery = get_query(Filters),
+  {_, [Result]} = do_execute(Pid, all, Schema, Source, GetQuery),
+  {ok, Result};
 do_update(Pid, _Repo, Filters, Schema, Source, Query) ->
   Conditions = normalize_query(maps:get(where, Query, [])),
   UpdateFields = normalize_query(maps:get(updates, Query, [])),
