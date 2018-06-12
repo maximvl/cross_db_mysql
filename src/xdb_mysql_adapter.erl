@@ -409,6 +409,8 @@ normalize_query([{Key, Values}]) when is_list(Values) ->
   [{Key, [normalize_query(Value) || Value <- Values]}];
 normalize_query(Params) when is_list(Params) ->
   [normalize_query(Param) || Param <- Params];
+normalize_query({ConditionalOperator, Params}) when is_list(Params) ->
+  {ConditionalOperator, normalize_query(Params)};
 normalize_query([{Key, undefined}]) ->
   [{Key, null}];
 normalize_query([{Key, Op, undefined}]) ->
