@@ -56,13 +56,13 @@ end_per_suite(_) ->
 -spec t_transaction_exception(xdb_ct:config()) -> ok.
 t_transaction_exception(Config) ->
   Repo = xdb_lib:keyfetch(repo, Config),
-  {error,{badmatch, _}} =
+  {error,{badmatch, _}, _} =
     Repo:transaction(fun() ->
       A = #{a => 1},
       #{b := _B} = A
     end),
 
-  {error, undef} =
+  {error, undef, _} =
     Repo:transaction(fun() ->
       Repo:in_transaction(Repo, 2)
     end),

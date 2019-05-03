@@ -103,6 +103,7 @@ execute(Repo, Op, #{schema := Schema, source := Source}, Query, _Opts) ->
   end.
 
 %% @hidden
+-spec transaction(atom(), fun(), any()) -> {ok, any()} | {error, any()} | {error, any(), list()}.
 transaction(Repo, Fun, _Opts) ->
   TxFun =
     fun() ->
@@ -118,8 +119,8 @@ transaction(Repo, Fun, _Opts) ->
       case mysql:transaction(Worker, TxFun) of
         {atomic, Result} ->
           {ok, Result};
-        {aborted, {Error, Reason}} when is_list(Reason) ->
-          {error, Error};
+        {aborted, {Error, Stacktrace}} when is_list(Stacktrace) ->
+          {error, Error, Stacktrace};
         {aborted, Reason} ->
           {error, Reason}
       end,
